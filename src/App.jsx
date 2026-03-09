@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './components/Modal';
+import EditItemModal from './components/EditItemModal';
 import SectionCard from './components/SectionCard';
 import TaskItem from './components/TaskItem';
 import HabitItem from './components/HabitItem';
@@ -15,7 +16,10 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [isTasksOpen, setIsTasksOpen] = useState(true);
+  const [isCompletedOpen, setIsCompletedOpen] = useState(true);
   const [isHabitsOpen, setIsHabitsOpen] = useState(true);
+  const [editingItem, setEditingItem] = useState(null);
+  const [editingType, setEditingType] = useState(null); // 'task' | 'habit'
 
   // --- ЭФФЕКТЫ (EFFECTS) ---
   useEffect(() => {
@@ -80,6 +84,43 @@ function App() {
     ));
   };
 
+  const openEditTask = (task) => {
+    setEditingItem(task);
+    setEditingType('task');
+  };
+
+  const openEditHabit = (habit) => {
+    setEditingItem(habit);
+    setEditingType('habit');
+  };
+
+  const closeEditModal = () => {
+    setEditingItem(null);
+    setEditingType(null);
+  };
+
+  const handleSaveItem = (id, newTitle, type) => {
+    if (type === 'task') {
+      setTasks(prev =>
+        prev.map((t) => (t.id === id ? { ...t, title: newTitle } : t)),
+      );
+    } else if (type === 'habit') {
+      setHabits(prev =>
+        prev.map((h) => (h.id === id ? { ...h, title: newTitle } : h)),
+      );
+    }
+    closeEditModal();
+  };
+
+  const handleDeleteItem = (id, type) => {
+    if (type === 'task') {
+      setTasks(prev => prev.filter((t) => t.id !== id));
+    } else if (type === 'habit') {
+      setHabits(prev => prev.filter((h) => h.id !== id));
+    }
+    closeEditModal();
+  };
+
   // Разделяем задачи на активные и выполненные
   const activeTasks = tasks.filter((t) => !t.completed);
   const completedTasks = tasks.filter((t) => t.completed);
@@ -113,6 +154,7 @@ function App() {
                     key={task.id}
                     task={task}
                     onToggle={toggleTaskStatus}
+                    onOpenDetails={openEditTask}
                   />
                 )}
               />
@@ -121,14 +163,15 @@ function App() {
               <SectionCard
                 title="Выполнено"
                 count={completedTasks.length}
-                isOpen={isHabitsOpen}
-                onToggle={() => setIsHabitsOpen(prev => !prev)}
+                isOpen={isCompletedOpen}
+                onToggle={() => setIsCompletedOpen(prev => !prev)}
                 items={completedTasks}
                 renderItem={(task) => (
                   <TaskItem
                     key={task.id}
                     task={task}
                     onToggle={toggleTaskStatus}
+                    onOpenDetails={openEditTask}
                   />
                 )}
               />
@@ -146,6 +189,7 @@ function App() {
                     key={habit.id}
                     habit={habit}
                     onToggle={toggleHabitStatus}
+                    onOpenDetails={openEditHabit}
                   />
                 )}
               />
@@ -270,6 +314,15 @@ function App() {
           </button>
         </form>
       </Modal>
+
+      <EditItemModal
+        isOpen={Boolean(editingItem)}
+        item={editingItem}
+        type={editingType}
+        onClose={closeEditModal}
+        onSave={handleSaveItem}
+        onDelete={handleDeleteItem}
+      />
     </div>
   );
 }
