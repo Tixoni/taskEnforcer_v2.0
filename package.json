@@ -1,9 +1,20 @@
 {
   "name": "habits-app",
-  "private": true,
   "version": "0.0.0",
+  "private": true,
+  "description": "This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.",
   "homepage": "https://Tixoni.github.io/taskEnforcer_v2.0",
+  "bugs": {
+    "url": "https://github.com/Tixoni/taskEnforcer_v2.0/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Tixoni/taskEnforcer_v2.0.git"
+  },
+  "license": "ISC",
+  "author": "",
   "type": "module",
+  "main": "eslint.config.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -19,14 +30,14 @@
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
     "@vitejs/plugin-react": "^4.2.1",
-    "autoprefixer": "^10.4.16",
+    "autoprefixer": "^10.4.27",
     "eslint": "^8.55.0",
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
     "gh-pages": "^6.3.0",
-    "postcss": "^8.4.32",
-    "tailwindcss": "^3.3.6",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^3.4.19",
     "vite": "^5.0.8"
   }
 }
