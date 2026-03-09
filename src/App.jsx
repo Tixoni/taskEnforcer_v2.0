@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './components/Modal';
+import SectionCard from './components/SectionCard';
+import TaskItem from './components/TaskItem';
+import HabitItem from './components/HabitItem';
+import NavButton from './components/NavButton';
+import { THEME_COLORS } from './theme';
 import { loadData, saveData, checkDailyReset } from './utils/storage';
 
 function App() {
@@ -75,9 +80,13 @@ function App() {
     ));
   };
 
+  // Разделяем задачи на активные и выполненные
+  const activeTasks = tasks.filter((t) => !t.completed);
+  const completedTasks = tasks.filter((t) => t.completed);
+
   // --- РЕНДЕРИНГ (UI) ---
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
+    <div className={`h-screen flex flex-col ${THEME_COLORS.background}`}>
       {/* КОНТЕНТ (СКРОЛЛИТСЯ) */}
       <main className="flex-1 overflow-y-auto">
         {/* Вкладка: СЕГОДНЯ */}
@@ -86,108 +95,60 @@ function App() {
             {/* Header ПРИКЛЕЕН К ВЕРХУ внутри скролла */}
             <header className="sticky top-0 bg-black text-white p-5 shadow-lg z-10">
               <h1 className="text-2xl font-bold tracking-tight">Сегодня</h1>
-              <p className="text-sm mt-1">
+              <p className={`text-sm mt-1 ${THEME_COLORS.dateTextPrimary}`}>
                 {new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
               </p>
             </header>
             
             <div className="p-4 space-y-4 bg-black min-h-screen text-white">
               {/* Секция задач */}
-              <section className="bg-zinc-900 rounded-2xl px-4 py-3">
-                <button
-                  type="button"
-                  onClick={() => setIsTasksOpen(prev => !prev)}
-                  className="w-full flex items-center justify-between"
-                >
-                  <span className="text-sm font-semibold tracking-wide uppercase">
-                    Задачи
-                  </span>
-                  <span className="flex items-center space-x-2 text-zinc-400 text-sm">
-                    <span>{tasks.length}</span>
-                    <span className="text-lg leading-none">
-                      {isTasksOpen ? '˅' : '>'}
-                    </span>
-                  </span>
-                </button>
-
-                {isTasksOpen && (
-                  <div className="mt-3">
-                    {tasks.length === 0 ? (
-                      <p className="text-center text-zinc-400 py-4 text-sm">
-                        Задач пока нет. Добавьте первую!
-                      </p>
-                    ) : (
-                      <ul className="space-y-2">
-                        {tasks.map(task => (
-                          <li key={task.id} className="bg-zinc-800 rounded-xl p-3">
-                            <label className="flex items-center space-x-3 cursor-pointer">
-                              <input 
-                                type="checkbox" 
-                                checked={task.completed} 
-                                onChange={() => toggleTaskStatus(task.id)}
-                                className="w-5 h-5 text-blue-500 rounded focus:ring-blue-400"
-                              />
-                              <span className={`flex-1 text-sm ${task.completed ? 'line-through text-zinc-500' : 'text-zinc-50'}`}>
-                                {task.title}
-                              </span>
-                            </label>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
+              <SectionCard
+                title="Задачи"
+                count={activeTasks.length}
+                isOpen={isTasksOpen}
+                onToggle={() => setIsTasksOpen(prev => !prev)}
+                items={activeTasks}
+                renderItem={(task) => (
+                  <TaskItem
+                    key={task.id}
+                    task={task}
+                    onToggle={toggleTaskStatus}
+                  />
                 )}
-              </section>
+              />
+
+              {/* Секция выполненных задач */}
+              <SectionCard
+                title="Выполнено"
+                count={completedTasks.length}
+                isOpen={isHabitsOpen}
+                onToggle={() => setIsHabitsOpen(prev => !prev)}
+                items={completedTasks}
+                renderItem={(task) => (
+                  <TaskItem
+                    key={task.id}
+                    task={task}
+                    onToggle={toggleTaskStatus}
+                  />
+                )}
+              />
 
               {/* Секция привычек */}
-              <section className="bg-zinc-900 rounded-2xl px-4 py-3">
-                <button
-                  type="button"
-                  onClick={() => setIsHabitsOpen(prev => !prev)}
-                  className="w-full flex items-center justify-between"
-                >
-                  <span className="text-sm font-semibold tracking-wide uppercase">
-                    Привычки
-                  </span>
-                  <span className="flex items-center space-x-2 text-zinc-400 text-sm">
-                    <span>{habits.length}</span>
-                    <span className="text-lg leading-none">
-                      {isHabitsOpen ? '˅' : '>'}
-                    </span>
-                  </span>
-                </button>
-
-                {isHabitsOpen && (
-                  <div className="mt-3">
-                    {habits.length === 0 ? (
-                      <p className="text-center text-zinc-400 py-4 text-sm">
-                        Список привычек пуст.
-                      </p>
-                    ) : (
-                      <ul className="space-y-2">
-                        {habits.map(habit => (
-                          <li key={habit.id} className="bg-zinc-800 rounded-xl p-3 flex justify-between items-center">
-                            <label className="flex items-center space-x-3 cursor-pointer flex-1">
-                              <input
-                                className="w-5 h-5 text-green-500 rounded focus:ring-green-400"
-                                type="checkbox"
-                                checked={Boolean(habit.completed)}
-                                onChange={() => toggleHabitStatus(habit.id)}
-                              />
-                              <span className={`text-sm ${habit.completed ? 'line-through text-zinc-500' : 'text-zinc-50'}`}>
-                                {habit.title}
-                              </span>
-                            </label>
-                            <span className="text-xs bg-zinc-700 px-2 py-1 rounded-full text-zinc-200">
-                              {Number.isFinite(Number(habit.countDay)) ? Number(habit.countDay) : 0} дн
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
+              <SectionCard
+                title="Привычки"
+                count={habits.length}
+                isOpen={isHabitsOpen}
+                onToggle={() => setIsHabitsOpen(prev => !prev)}
+                items={habits}
+                emptyText="Список привычек пуст."
+                renderItem={(habit) => (
+                  <HabitItem
+                    key={habit.id}
+                    habit={habit}
+                    onToggle={toggleHabitStatus}
+                  />
                 )}
-              </section>
+              />
             </div>
           </div>
         )}
@@ -259,7 +220,7 @@ function App() {
             setIsModalOpen(true);
             setActiveTab('today');
           }}
-          className="fixed right-5 bottom-20 h-14 w-14 rounded-full bg-blue-500 text-white text-3xl leading-none flex items-center justify-center shadow-xl hover:bg-blue-600 transition z-40"
+          className={`fixed right-5 bottom-20 h-14 w-14 rounded-full text-white text-3xl flex items-center justify-center shadow-xl transition z-40 border-0 outline-none ring-0 ${THEME_COLORS.accentBg} ${THEME_COLORS.accentBgHover}`}
         >
           +
         </button>
@@ -268,36 +229,21 @@ function App() {
       {/* НИЖНЯЯ НАВИГАЦИЯ */}
       <footer className="bg-black py-2 px-4">
         <nav className="flex justify-around">
-          <button 
+          <NavButton
+            label="Сегодня"
+            isActive={activeTab === 'today'}
             onClick={() => setActiveTab('today')}
-            className={`py-3 px-5 rounded-full font-medium transition ${
-              activeTab === 'today' 
-                ? 'bg-blue-500 text-white shadow-md' 
-                : 'text-gray-500 hover:bg-gray-100'
-            }`}
-          >
-            Сегодня
-          </button>
-          <button 
+          />
+          <NavButton
+            label="Привычки"
+            isActive={activeTab === 'habits'}
             onClick={() => setActiveTab('habits')}
-            className={`py-3 px-5 rounded-full font-medium transition ${
-              activeTab === 'habits' 
-                ? 'bg-green-500 text-white shadow-md' 
-                : 'text-gray-500 hover:bg-gray-100'
-            }`}
-          >
-            Привычки
-          </button>
-          <button 
+          />
+          <NavButton
+            label="Календарь"
+            isActive={activeTab === 'calendar'}
             onClick={() => setActiveTab('calendar')}
-            className={`py-3 px-5 rounded-full font-medium transition ${
-              activeTab === 'calendar' 
-                ? 'bg-purple-500 text-white shadow-md' 
-                : 'text-gray-500 hover:bg-gray-100'
-            }`}
-          >
-            Календарь
-          </button>
+          />
         </nav>
       </footer>
 
