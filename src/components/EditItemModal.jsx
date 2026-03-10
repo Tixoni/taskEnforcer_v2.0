@@ -60,7 +60,7 @@ function EditItemModal({ isOpen, item, type, onClose, onSave, onDelete }) {
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            className="flex-1 w-full rounded-xl bg-zinc-800 text-sm text-white p-3 resize-none outline-none border border-zinc-700 focus:border-orange-500"
+            className="max-h-36 flex-1 w-full rounded-xl bg-zinc-800 text-sm text-white p-3 resize-none outline-none border border-zinc-900 focus:border-orange-500"
             autoFocus
           />
 
@@ -77,13 +77,6 @@ function EditItemModal({ isOpen, item, type, onClose, onSave, onDelete }) {
               className="w-full rounded-xl py-2.5 text-sm font-medium text-red-400 border border-red-500/50 hover:bg-red-500/10"
             >
               Удалить
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-full rounded-xl py-2.5 text-sm font-medium border border-zinc-700 text-zinc-200 hover:bg-zinc-800"
-            >
-              Отмена
             </button>
           </div>
         </form>

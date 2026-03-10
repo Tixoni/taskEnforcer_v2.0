@@ -304,14 +304,8 @@ function App() {
             placeholder={activeTab === 'today' ? 'Что планируем сделать?' : 'Название привычки'} 
             required 
             autoFocus
-            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 mb-4"
+            className="w-full p-3 rounded-lg focus:outline-none  mb-2 "
           />
-          <button 
-            type="submit"
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 rounded-lg transition"
-          >
-            Добавить
-          </button>
         </form>
       </Modal>
 

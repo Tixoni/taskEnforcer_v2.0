@@ -24,21 +24,12 @@ function Modal({ isOpen, title, onClose, children }) {
       <div
         className={`w-full max-w-md mx-0 rounded-t-3xl bg-zinc-900 text-white p-6 shadow-2xl transform transition-transform duration-300 ${
           visible ? 'translate-y-0' : 'translate-y-full'
-        } h-[30vh]`}
+        } h-[25vh]`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold truncate">{title}</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-zinc-400 hover:text-white text-xl leading-none px-2"
-          >
-            ×
-          </button>
-        </div>
+        
 
-        <div className="h-full overflow-y-auto">
+        <div className="h-full overflow-y-auto px-0">
           {children}
         </div>
       </div>
