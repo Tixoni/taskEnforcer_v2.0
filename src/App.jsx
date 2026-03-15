@@ -8,6 +8,10 @@ import NavButton from './components/NavButton';
 import CalendarDay from './components/CalendarDay';
 import { THEME_COLORS } from './theme';
 import { loadData, saveData, checkDailyReset } from './utils/storage';
+import iconToday from './assets/today.png';
+import iconHabits from './assets/habits.png';
+import iconCalendar from './assets/calendar.png';
+import iconGym from './assets/gym.png';
 
 function App() {
   // --- СОСТОЯНИЕ (STATE) ---
@@ -452,6 +456,23 @@ function App() {
             </div>
           </div>
         )}
+
+        {/* Вкладка: ТРЕНИРОВКИ */}
+        {activeTab === 'workouts' && (
+          <div className="min-h-screen bg-black text-white">
+            <header className="sticky top-0 bg-black text-white p-5 shadow-lg z-10">
+              <h1 className="text-2xl font-bold tracking-tight">Тренировки</h1>
+              <p className={`text-sm mt-1 ${THEME_COLORS.dateTextPrimary}`}>
+                {new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
+              </p>
+            </header>
+            <div className="p-4">
+              <div className={`${THEME_COLORS.sectionBackground} rounded-2xl p-6 text-center`}>
+                <p className="text-zinc-400">Здесь будут ваши тренировки.</p>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Плавающая кнопка создания задачи/привычки (FAB) */}
@@ -471,19 +492,28 @@ function App() {
       <footer className="bg-black py-2 px-4">
         <nav className="flex justify-around">
           <NavButton
+            icon={iconToday}
             label="Сегодня"
             isActive={activeTab === 'today'}
             onClick={() => setActiveTab('today')}
           />
           <NavButton
+            icon={iconHabits}
             label="Привычки"
             isActive={activeTab === 'habits'}
             onClick={() => setActiveTab('habits')}
           />
           <NavButton
+            icon={iconCalendar}
             label="Календарь"
             isActive={activeTab === 'calendar'}
             onClick={() => setActiveTab('calendar')}
+          />
+          <NavButton
+            icon={iconGym}
+            label="Тренировки"
+            isActive={activeTab === 'workouts'}
+            onClick={() => setActiveTab('workouts')}
           />
         </nav>
       </footer>
