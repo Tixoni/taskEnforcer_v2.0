@@ -211,11 +211,14 @@ function App() {
     return hasTask || hasHabit;
   };
 
+  // Задачи дня — по дате создания
   const tasksForSelectedDay = tasks.filter(
     (t) => getDateKey(t.createdAt) === selectedDateKey,
   );
+
+  // Привычки, выполненные в выбранный день — по дате выполнения
   const habitsForSelectedDay = habits.filter(
-    (h) => getDateKey(h.createdAt) === selectedDateKey,
+    (h) => h.completedAt && getDateKey(h.completedAt) === selectedDateKey,
   );
 
   const changeMonth = (offset) => {
@@ -451,8 +454,8 @@ function App() {
         )}
       </main>
 
-      {/* Плавающая кнопка создания задачи (FAB) */}
-      {(activeTab === 'today' || activeTab === 'calendar') && (
+      {/* Плавающая кнопка создания задачи/привычки (FAB) */}
+      {(activeTab === 'today' || activeTab === 'calendar' || activeTab === 'habits') && (
         <button
           type="button"
           onClick={() => {
