@@ -127,10 +127,28 @@ button:focus-visible {
   }
 }
 
+@keyframes calendar-slide-left {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
 
+@keyframes calendar-slide-right {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
 
-.round-checkbox {
-  width: 14px;        
-  height: 14px;  
-  border-radius: 50%;
+.calendar-slide-left {
+  animation: calendar-slide-left 0.25s ease-out;
+}
+
+.calendar-slide-right {
+  animation: calendar-slide-right 0.25s ease-out;
 }

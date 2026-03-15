@@ -15,6 +15,7 @@ export const saveData = (key, data) => {
 const normalizeHabit = (habit) => {
   const createdAt = habit?.createdAt || new Date().toISOString();
   const countDay = Number.isFinite(Number(habit?.countDay)) ? Number(habit.countDay) : 0;
+  const completedAt = habit?.completedAt || null;
 
   return {
     id: habit?.id ?? Date.now(),
@@ -22,6 +23,7 @@ const normalizeHabit = (habit) => {
     completed: Boolean(habit?.completed),
     createdAt,
     countDay,
+    completedAt,
   };
 };
 

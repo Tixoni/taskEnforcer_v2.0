@@ -5,6 +5,7 @@ import SectionCard from './components/SectionCard';
 import TaskItem from './components/TaskItem';
 import HabitItem from './components/HabitItem';
 import NavButton from './components/NavButton';
+import CalendarDay from './components/CalendarDay';
 import { THEME_COLORS } from './theme';
 import { loadData, saveData, checkDailyReset } from './utils/storage';
 
@@ -20,6 +21,11 @@ function App() {
   const [isHabitsOpen, setIsHabitsOpen] = useState(true);
   const [editingItem, setEditingItem] = useState(null);
   const [editingType, setEditingType] = useState(null); // 'task' | 'habit'
+  const [selectedDateKey, setSelectedDateKey] = useState(
+    new Date().toISOString().split('T')[0],
+  );
+  const [calendarSwipeStartX, setCalendarSwipeStartX] = useState(null);
+  const [calendarSlideDir, setCalendarSlideDir] = useState(0); // -1 left, 1 right
 
   // --- ЭФФЕКТЫ (EFFECTS) ---
   useEffect(() => {
@@ -49,12 +55,15 @@ function App() {
     e.preventDefault();
     const title = e.target.elements.title.value;
     
-    if (activeTab === 'today') {
+    if (activeTab === 'today' || activeTab === 'calendar') {
+      const baseDate =
+        activeTab === 'today' ? new Date() : new Date(selectedDateKey);
       const newTask = {
         id: Date.now(),
         title,
         completed: false,
-        createdAt: new Date().toISOString()
+        createdAt: baseDate.toISOString(),
+        completedAt: null,
       };
       setTasks([...tasks, newTask]);
     } else if (activeTab === 'habits') {
@@ -63,7 +72,8 @@ function App() {
         title,
         completed: false,
         createdAt: new Date().toISOString(),
-        countDay: 0
+        countDay: 0,
+        completedAt: null,
       };
       setHabits([...habits, newHabit]);
     }
@@ -73,15 +83,29 @@ function App() {
   };
 
   const toggleTaskStatus = (id) => {
-    setTasks(tasks.map(task => 
-      task.id === id ? { ...task, completed: !task.completed } : task
-    ));
+    const todayKey = new Date().toISOString().split('T')[0];
+    setTasks(tasks.map(task => {
+      if (task.id !== id) return task;
+      const nextCompleted = !task.completed;
+      return {
+        ...task,
+        completed: nextCompleted,
+        completedAt: nextCompleted ? todayKey : null,
+      };
+    }));
   };
 
   const toggleHabitStatus = (id) => {
-    setHabits(habits.map(habit =>
-      habit.id === id ? { ...habit, completed: !habit.completed } : habit
-    ));
+    const todayKey = new Date().toISOString().split('T')[0];
+    setHabits(habits.map(habit => {
+      if (habit.id !== id) return habit;
+      const nextCompleted = !habit.completed;
+      return {
+        ...habit,
+        completed: nextCompleted,
+        completedAt: nextCompleted ? todayKey : null,
+      };
+    }));
   };
 
   const openEditTask = (task) => {
@@ -121,9 +145,107 @@ function App() {
     closeEditModal();
   };
 
+  const getDateKey = (value) => {
+    if (!value) return null;
+    const d = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toISOString().split('T')[0];
+  };
+
   // Разделяем задачи на активные и выполненные
   const activeTasks = tasks.filter((t) => !t.completed);
   const completedTasks = tasks.filter((t) => t.completed);
+
+  const selectedDate = new Date(selectedDateKey);
+  const year = selectedDate.getFullYear();
+  const month = selectedDate.getMonth(); // 0-11
+
+  const firstOfMonth = new Date(year, month, 1);
+  const lastOfMonth = new Date(year, month + 1, 0);
+  const daysInMonth = lastOfMonth.getDate();
+
+  // Начинаем неделю с понедельника
+  const firstWeekday = (firstOfMonth.getDay() + 6) % 7; // 0 = Monday
+
+  const calendarCells = [];
+  const prevMonthLastDate = new Date(year, month, 0).getDate();
+
+  // Дни предыдущего месяца
+  for (let i = firstWeekday - 1; i >= 0; i -= 1) {
+    const day = prevMonthLastDate - i;
+    calendarCells.push({
+      date: new Date(year, month - 1, day),
+      isOtherMonth: true,
+    });
+  }
+
+  // Текущий месяц
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    calendarCells.push({
+      date: new Date(year, month, day),
+      isOtherMonth: false,
+    });
+  }
+
+  // Дни следующего месяца до заполнения сетки (6 недель максимум)
+  const nextMonthStart = new Date(year, month + 1, 1);
+  let nextDay = 1;
+  while (calendarCells.length % 7 !== 0 || calendarCells.length < 42) {
+    calendarCells.push({
+      date: new Date(nextMonthStart.getFullYear(), nextMonthStart.getMonth(), nextDay),
+      isOtherMonth: true,
+    });
+    nextDay += 1;
+  }
+
+  const todayKey = getDateKey(new Date());
+
+  const hasPendingForDay = (dateKey) => {
+    if (!dateKey) return false;
+    const hasTask = tasks.some(
+      (t) => !t.completed && getDateKey(t.createdAt) === dateKey,
+    );
+    const hasHabit = habits.some(
+      (h) => !h.completed && getDateKey(h.createdAt) === dateKey,
+    );
+    return hasTask || hasHabit;
+  };
+
+  const tasksForSelectedDay = tasks.filter(
+    (t) => getDateKey(t.createdAt) === selectedDateKey,
+  );
+  const habitsForSelectedDay = habits.filter(
+    (h) => getDateKey(h.createdAt) === selectedDateKey,
+  );
+
+  const changeMonth = (offset) => {
+    const d = new Date(selectedDateKey);
+    d.setMonth(d.getMonth() + offset);
+    setSelectedDateKey(getDateKey(d));
+    setCalendarSlideDir(offset > 0 ? 1 : -1);
+    setTimeout(() => setCalendarSlideDir(0), 260);
+  };
+
+  const handleCalendarTouchStart = (event) => {
+    if (event.touches && event.touches.length > 0) {
+      setCalendarSwipeStartX(event.touches[0].clientX);
+    }
+  };
+
+  const handleCalendarTouchEnd = (event) => {
+    if (calendarSwipeStartX == null) return;
+    const endX = event.changedTouches[0].clientX;
+    const deltaX = endX - calendarSwipeStartX;
+    const threshold = 50;
+    if (deltaX > threshold) {
+      // свайп вправо -> предыдущий месяц
+      changeMonth(-1);
+    } else if (deltaX < -threshold) {
+      // свайп влево -> следующий месяц
+      changeMonth(1);
+    }
+    setCalendarSwipeStartX(null);
+  };
 
   // --- РЕНДЕРИНГ (UI) ---
   return (
@@ -200,69 +322,141 @@ function App() {
         {/* Вкладка: ПРИВЫЧКИ */}
         {activeTab === 'habits' && (
           <div>
-            <header className="sticky top-0 bg-gradient-to-r from-green-500 to-green-600 text-white p-5 shadow-lg z-10">
-              <h1 className="text-2xl font-bold tracking-tight">Все привычки</h1>
+            {/* Header ПРИКЛЕЕН К ВЕРХУ внутри скролла */}
+            <header className="sticky top-0 bg-black text-white p-5 shadow-lg z-10">
+              <h1 className="text-2xl font-bold tracking-tight">Привычки</h1>
+              <p className={`text-sm mt-1 ${THEME_COLORS.dateTextPrimary}`}>
+                {new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
+              </p>
             </header>
             
-            <div className="p-4">
-              <button 
-                onClick={() => setIsModalOpen(true)}
-                className="w-full bg-green-500 hover:bg-green-600 text-white font-medium py-3 px-4 rounded-xl shadow-md transition duration-200 mb-6"
-              >
-                + Создать привычку
-              </button>
-              
-              {habits.length === 0 ? (
-                <p className="text-center text-gray-500 py-8">Список привычек пуст.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {habits.map(habit => (
-                    <li key={habit.id} className="bg-white rounded-lg p-3 shadow-sm flex justify-between items-center">
-                      <label className="flex items-center space-x-3 cursor-pointer flex-1">
-                        <input
-                          className="w-5 h-5 text-green-500 rounded focus:ring-green-400"
-                          type="checkbox"
-                          checked={Boolean(habit.completed)}
-                          onChange={() => toggleHabitStatus(habit.id)}
-                        />
-                        <span className={`${habit.completed ? 'line-through text-gray-400' : 'text-gray-700'}`}>
-                          {habit.title}
-                        </span>
-                      </label>
-                      <span className="text-sm bg-gray-100 px-2 py-1 rounded-full text-gray-600">
-                        {Number.isFinite(Number(habit.countDay)) ? Number(habit.countDay) : 0} дн
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
+            <div className="p-4 space-y-4 bg-black min-h-screen text-white">
+              {/* Секция привычек */}
+              <SectionCard
+                title="Привычки"
+                count={habits.length}
+                isOpen={isHabitsOpen}
+                onToggle={() => setIsHabitsOpen(prev => !prev)}
+                items={habits}
+                emptyText="Список привычек пуст."
+                renderItem={(habit) => (
+                  <HabitItem
+                    key={habit.id}
+                    habit={habit}
+                    onToggle={toggleHabitStatus}
+                    onOpenDetails={openEditHabit}
+                  />
+                )}
+              />
             </div>
           </div>
         )}
 
         {/* Вкладка: КАЛЕНДАРЬ */}
         {activeTab === 'calendar' && (
-          <div>
-            <header className="sticky top-0 bg-gradient-to-r from-purple-500 to-purple-600 text-white p-5 shadow-lg z-10">
-              <h1 className="text-2xl font-bold tracking-tight">Статистика</h1>
-            </header>
-            
-            <div className="p-4">
-              <div className="bg-white rounded-xl p-6 shadow-sm text-center">
-                <p className="text-gray-600">Здесь скоро появится календарь мониторинга прогресса.</p>
+          <div className="min-h-screen bg-black text-white">
+            <header className="sticky top-0 bg-black p-5 shadow-lg z-10 flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight">
+                  {selectedDate.toLocaleDateString('ru-RU', {
+                    month: 'long',
+                    year: 'numeric',
+                  })}
+                </h1>
+                <p className={`text-sm mt-1 ${THEME_COLORS.dateTextPrimary}`}>
+                  {selectedDate.toLocaleDateString('ru-RU', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  })}
+                </p>
               </div>
+            </header>
+
+            <div
+              className={`p-4 space-y-6 ${
+                calendarSlideDir === 1
+                  ? 'calendar-slide-left'
+                  : calendarSlideDir === -1
+                    ? 'calendar-slide-right'
+                    : ''
+              }`}
+              onTouchStart={handleCalendarTouchStart}
+              onTouchEnd={handleCalendarTouchEnd}
+            >
+              {/* Календарная сетка */}
+              <div className="rounded-2xl bg-zinc-900 p-4">
+                <div className="grid grid-cols-7 text-center text-xs text-zinc-500 mb-2">
+                  <span>Пн</span>
+                  <span>Вт</span>
+                  <span>Ср</span>
+                  <span>Чт</span>
+                  <span>Пт</span>
+                  <span>Сб</span>
+                  <span>Вс</span>
+                </div>
+                <div className="grid grid-cols-7 gap-y-2">
+                  {calendarCells.map((cell, idx) => {
+                    const { date, isOtherMonth } = cell;
+                    const key = getDateKey(date);
+                    return (
+                      <CalendarDay
+                        key={key}
+                        date={date}
+                        isToday={key === todayKey}
+                        isSelected={key === selectedDateKey}
+                        isOtherMonth={isOtherMonth}
+                        hasPending={hasPendingForDay(key)}
+                        onSelect={(d) => setSelectedDateKey(getDateKey(d))}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Списки задач и привычек на выбранный день */}
+              <SectionCard
+                title="Задачи дня"
+                count={tasksForSelectedDay.length}
+                isOpen
+                onToggle={() => {}}
+                items={tasksForSelectedDay}
+                renderItem={(task) => (
+                  <TaskItem
+                    key={task.id}
+                    task={task}
+                    onToggle={toggleTaskStatus}
+                    onOpenDetails={openEditTask}
+                  />
+                )}
+              />
+
+              <SectionCard
+                title="Привычки дня"
+                count={habitsForSelectedDay.length}
+                isOpen
+                onToggle={() => {}}
+                items={habitsForSelectedDay}
+                renderItem={(habit) => (
+                  <HabitItem
+                    key={habit.id}
+                    habit={habit}
+                    onToggle={toggleHabitStatus}
+                    onOpenDetails={openEditHabit}
+                  />
+                )}
+              />
             </div>
           </div>
         )}
       </main>
 
       {/* Плавающая кнопка создания задачи (FAB) */}
-      {activeTab === 'today' && (
+      {(activeTab === 'today' || activeTab === 'calendar') && (
         <button
           type="button"
           onClick={() => {
             setIsModalOpen(true);
-            setActiveTab('today');
           }}
           className={`fixed right-5 bottom-20 h-14 w-14 rounded-full text-white text-3xl flex items-center justify-center shadow-xl transition z-40 border-0 outline-none ring-0 ${THEME_COLORS.accentBg} ${THEME_COLORS.accentBgHover}`}
         >
