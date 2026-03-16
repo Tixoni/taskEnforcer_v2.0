@@ -30,6 +30,8 @@ function App() {
   );
   const [calendarSlideDir, setCalendarSlideDir] = useState(0); // -1 left, 1 right
   const [calendarView, setCalendarView] = useState('month'); // 'month' | 'week'
+  const [isCalendarTasksOpen, setIsCalendarTasksOpen] = useState(true);
+  const [isCalendarHabitsOpen, setIsCalendarHabitsOpen] = useState(true);
 
   // --- ЭФФЕКТЫ (EFFECTS) ---
   useEffect(() => {
@@ -170,9 +172,14 @@ function App() {
     return `${y}-${m}-${day}`;
   };
 
+  const todayKey = getDateKey(new Date());
+
   // Разделяем задачи на активные и выполненные
   const activeTasks = tasks.filter((t) => !t.completed);
-  const completedTasks = tasks.filter((t) => t.completed);
+  // На вкладке "Сегодня" показываем только задачи, выполненные сегодня
+  const completedTasks = tasks.filter(
+    (t) => t.completed && t.completedAt && getDateKey(t.completedAt) === todayKey,
+  );
 
   const selectedDate = parseDateKeyLocal(selectedDateKey) || new Date();
   const year = selectedDate.getFullYear();
@@ -215,8 +222,6 @@ function App() {
     });
     nextDay += 1;
   }
-
-  const todayKey = getDateKey(new Date());
 
   // Неделя (Пн..Вс), в которой находится выбранный день
   const selectedWeekStart = (() => {
@@ -314,23 +319,25 @@ function App() {
                 )}
               />
 
-              {/* Секция привычек */}
-              <SectionCard
-                title="Привычки"
-                count={habits.length}
-                isOpen={isHabitsOpen}
-                onToggle={() => setIsHabitsOpen(prev => !prev)}
-                items={habits}
-                emptyText="Список привычек пуст."
-                renderItem={(habit) => (
-                  <HabitItem
-                    key={habit.id}
-                    habit={habit}
-                    onToggle={toggleHabitStatus}
-                    onOpenDetails={openEditHabit}
-                  />
-                )}
-              />
+              {/* Секция привычек показывается на вкладке календаря только для сегодняшнего дня */}
+              {selectedDateKey === todayKey && (
+                <SectionCard
+                  title="Привычки"
+                  count={habits.length}
+                  isOpen={isHabitsOpen}
+                  onToggle={() => setIsHabitsOpen(prev => !prev)}
+                  items={habits}
+                  emptyText="Список привычек пуст."
+                  renderItem={(habit) => (
+                    <HabitItem
+                      key={habit.id}
+                      habit={habit}
+                      onToggle={toggleHabitStatus}
+                      onOpenDetails={openEditHabit}
+                    />
+                  )}
+                />
+              )}
             </div>
           </div>
         )}
@@ -389,7 +396,7 @@ function App() {
               </div>
 
               {/* Дни недели всегда сверху */}
-              <div className="mt-4 grid grid-cols-7 text-center text-xs text-zinc-500">
+              <div className="mt-2 grid grid-cols-7 text-center text-xs text-zinc-500">
                 <span>Пн</span>
                 <span>Вт</span>
                 <span>Ср</span>
@@ -523,8 +530,8 @@ function App() {
               <SectionCard
                 title="Задачи дня"
                 count={tasksForSelectedDay.length}
-                isOpen
-                onToggle={() => {}}
+                isOpen={isCalendarTasksOpen}
+                onToggle={() => setIsCalendarTasksOpen((prev) => !prev)}
                 items={tasksForSelectedDay}
                 renderItem={(task) => (
                   <TaskItem
@@ -536,12 +543,17 @@ function App() {
                 )}
               />
 
+
+              
+              {/* Секция привычек показывается на вкладке календаря только для сегодняшнего дня */}
+            {selectedDateKey === todayKey && (
               <SectionCard
-                title="Привычки дня"
-                count={habitsForSelectedDay.length}
-                isOpen
-                onToggle={() => {}}
-                items={habitsForSelectedDay}
+                title="Привычки"
+                count={habits.length}
+                isOpen={isHabitsOpen}
+                onToggle={() => setIsHabitsOpen(prev => !prev)}
+                items={habits}
+                emptyText="Список привычек пуст."
                 renderItem={(habit) => (
                   <HabitItem
                     key={habit.id}
@@ -551,6 +563,7 @@ function App() {
                   />
                 )}
               />
+            )}
             </div>
           </div>
         )}
