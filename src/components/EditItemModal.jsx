@@ -64,19 +64,19 @@ function EditItemModal({ isOpen, item, type, onClose, onSave, onDelete }) {
             autoFocus
           />
 
-          <div className="mt-4 space-y-2">
-            <button
-              type="submit"
-              className={`w-full rounded-xl py-2.5 text-sm font-medium text-white ${THEME_COLORS.accentBg} ${THEME_COLORS.accentBgHover}`}
-            >
-              Сохранить
-            </button>
+          <div className="mt-4 flex flex-row gap-2">
             <button
               type="button"
               onClick={handleDelete}
-              className="w-full rounded-xl py-2.5 text-sm font-medium text-red-400 border border-red-500/50 hover:bg-red-500/10"
+              className="flex-1 rounded-xl py-2.5 text-sm font-medium text-red-400 border border-red-500/50 hover:bg-red-500/10"
             >
               Удалить
+            </button>
+            <button
+              type="submit"
+              className={`flex-1 rounded-xl py-2.5 text-sm font-medium text-white ${THEME_COLORS.accentBg} ${THEME_COLORS.accentBgHover}`}
+            >
+              Сохранить
             </button>
           </div>
         </form>
