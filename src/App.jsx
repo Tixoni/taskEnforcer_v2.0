@@ -28,8 +28,8 @@ function App() {
   const [selectedDateKey, setSelectedDateKey] = useState(
     new Date().toISOString().split('T')[0],
   );
-  const [calendarSwipeStartX, setCalendarSwipeStartX] = useState(null);
   const [calendarSlideDir, setCalendarSlideDir] = useState(0); // -1 left, 1 right
+  const [calendarView, setCalendarView] = useState('month'); // 'month' | 'week'
 
   // --- ЭФФЕКТЫ (EFFECTS) ---
   useEffect(() => {
@@ -149,18 +149,32 @@ function App() {
     closeEditModal();
   };
 
+  // Важно: Date('YYYY-MM-DD') парсится как UTC и может сдвигать день в локальной TZ.
+  // Поэтому для календаря используем локальные (year, month, day).
+  const parseDateKeyLocal = (dateKey) => {
+    if (!dateKey || typeof dateKey !== 'string') return null;
+    const parts = dateKey.split('-').map((p) => Number(p));
+    if (parts.length !== 3) return null;
+    const [y, m, d] = parts;
+    if (!y || !m || !d) return null;
+    return new Date(y, m - 1, d);
+  };
+
   const getDateKey = (value) => {
     if (!value) return null;
     const d = value instanceof Date ? value : new Date(value);
     if (Number.isNaN(d.getTime())) return null;
-    return d.toISOString().split('T')[0];
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
   };
 
   // Разделяем задачи на активные и выполненные
   const activeTasks = tasks.filter((t) => !t.completed);
   const completedTasks = tasks.filter((t) => t.completed);
 
-  const selectedDate = new Date(selectedDateKey);
+  const selectedDate = parseDateKeyLocal(selectedDateKey) || new Date();
   const year = selectedDate.getFullYear();
   const month = selectedDate.getMonth(); // 0-11
 
@@ -204,6 +218,22 @@ function App() {
 
   const todayKey = getDateKey(new Date());
 
+  // Неделя (Пн..Вс), в которой находится выбранный день
+  const selectedWeekStart = (() => {
+    const d = parseDateKeyLocal(selectedDateKey) || new Date();
+    const weekday = (d.getDay() + 6) % 7; // Пн=0
+    d.setDate(d.getDate() - weekday);
+    return d;
+  })();
+  const weekCells = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(
+      selectedWeekStart.getFullYear(),
+      selectedWeekStart.getMonth(),
+      selectedWeekStart.getDate() + i,
+    );
+    return { date, isOtherMonth: date.getMonth() !== month };
+  });
+
   const hasPendingForDay = (dateKey) => {
     if (!dateKey) return false;
     const hasTask = tasks.some(
@@ -226,32 +256,11 @@ function App() {
   );
 
   const changeMonth = (offset) => {
-    const d = new Date(selectedDateKey);
+    const d = parseDateKeyLocal(selectedDateKey) || new Date();
     d.setMonth(d.getMonth() + offset);
     setSelectedDateKey(getDateKey(d));
     setCalendarSlideDir(offset > 0 ? 1 : -1);
     setTimeout(() => setCalendarSlideDir(0), 260);
-  };
-
-  const handleCalendarTouchStart = (event) => {
-    if (event.touches && event.touches.length > 0) {
-      setCalendarSwipeStartX(event.touches[0].clientX);
-    }
-  };
-
-  const handleCalendarTouchEnd = (event) => {
-    if (calendarSwipeStartX == null) return;
-    const endX = event.changedTouches[0].clientX;
-    const deltaX = endX - calendarSwipeStartX;
-    const threshold = 50;
-    if (deltaX > threshold) {
-      // свайп вправо -> предыдущий месяц
-      changeMonth(-1);
-    } else if (deltaX < -threshold) {
-      // свайп влево -> следующий месяц
-      changeMonth(1);
-    }
-    setCalendarSwipeStartX(null);
   };
 
   // --- РЕНДЕРИНГ (UI) ---
@@ -362,7 +371,7 @@ function App() {
         {/* Вкладка: КАЛЕНДАРЬ */}
         {activeTab === 'calendar' && (
           <div className="min-h-screen bg-black text-white">
-            <header className="sticky top-0 bg-black p-5 shadow-lg z-10 flex items-center justify-between">
+            <header className="sticky top-0 bg-black p-5 shadow-lg z-20">
               <div>
                 <h1 className="text-2xl font-bold tracking-tight">
                   {selectedDate.toLocaleDateString('ru-RU', {
@@ -378,46 +387,135 @@ function App() {
                   })}
                 </p>
               </div>
+
+              {/* Дни недели всегда сверху */}
+              <div className="mt-4 grid grid-cols-7 text-center text-xs text-zinc-500">
+                <span>Пн</span>
+                <span>Вт</span>
+                <span>Ср</span>
+                <span>Чт</span>
+                <span>Пт</span>
+                <span>Сб</span>
+                <span>Вс</span>
+              </div>
             </header>
 
-            <div
-              className={`p-4 space-y-6 ${
-                calendarSlideDir === 1
-                  ? 'calendar-slide-left'
-                  : calendarSlideDir === -1
-                    ? 'calendar-slide-right'
-                    : ''
-              }`}
-              onTouchStart={handleCalendarTouchStart}
-              onTouchEnd={handleCalendarTouchEnd}
-            >
-              {/* Календарная сетка */}
-              <div className="rounded-2xl bg-zinc-900 p-4">
-                <div className="grid grid-cols-7 text-center text-xs text-zinc-500 mb-2">
-                  <span>Пн</span>
-                  <span>Вт</span>
-                  <span>Ср</span>
-                  <span>Чт</span>
-                  <span>Пт</span>
-                  <span>Сб</span>
-                  <span>Вс</span>
+            <div className="p-4 space-y-6">
+              {/* Календарь всегда в поле зрения */}
+              <div
+                className={`space-y-4 sticky top-[96px] bg-black pb-4 z-10 ${
+                  calendarSlideDir === 1
+                    ? 'calendar-slide-left'
+                    : calendarSlideDir === -1
+                      ? 'calendar-slide-right'
+                      : ''
+                }`}
+              >
+                {/* Календарная сетка */}
+                <div className="rounded-2xl bg-zinc-900 p-4">
+                  <div className="overflow-hidden">
+                    <div
+                      className={`grid grid-cols-7 gap-y-2 transition-all duration-300 ${
+                        calendarView === 'month'
+                          ? 'max-h-[520px] opacity-100'
+                          : 'max-h-0 opacity-0'
+                      }`}
+                    >
+                      {calendarCells.map((cell) => {
+                        const { date, isOtherMonth } = cell;
+                        const key = getDateKey(date);
+                        return (
+                          <CalendarDay
+                            key={key}
+                            date={date}
+                            isToday={key === todayKey}
+                            isSelected={key === selectedDateKey}
+                            isOtherMonth={isOtherMonth}
+                            hasPending={hasPendingForDay(key)}
+                            onSelect={(d) => setSelectedDateKey(getDateKey(d))}
+                          />
+                        );
+                      })}
+                    </div>
+
+                    <div
+                      className={`grid grid-cols-7 gap-y-2 transition-all duration-300 ${
+                        calendarView === 'week'
+                          ? 'max-h-[80px] opacity-100 mt-0'
+                          : 'max-h-0 opacity-0'
+                      }`}
+                    >
+                      {weekCells.map((cell) => {
+                        const { date, isOtherMonth } = cell;
+                        const key = getDateKey(date);
+                        return (
+                          <CalendarDay
+                            key={key}
+                            date={date}
+                            isToday={key === todayKey}
+                            isSelected={key === selectedDateKey}
+                            isOtherMonth={isOtherMonth}
+                            hasPending={hasPendingForDay(key)}
+                            onSelect={(d) => setSelectedDateKey(getDateKey(d))}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
-                <div className="grid grid-cols-7 gap-y-2">
-                  {calendarCells.map((cell, idx) => {
-                    const { date, isOtherMonth } = cell;
-                    const key = getDateKey(date);
-                    return (
-                      <CalendarDay
-                        key={key}
-                        date={date}
-                        isToday={key === todayKey}
-                        isSelected={key === selectedDateKey}
-                        isOtherMonth={isOtherMonth}
-                        hasPending={hasPendingForDay(key)}
-                        onSelect={(d) => setSelectedDateKey(getDateKey(d))}
-                      />
-                    );
-                  })}
+
+                {/* Кнопки управления календарём */}
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedDateKey(todayKey);
+                        setCalendarView('month');
+                      }}
+                      className={`px-3 py-2 text-sm rounded-full border ${THEME_COLORS.accentBg} text-white border-transparent active:scale-[0.98] transition`}
+                    >
+                      Сегодня
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => changeMonth(-1)}
+                      className="px-3 py-2 text-sm rounded-full bg-zinc-900 text-zinc-200 hover:bg-zinc-800 active:scale-[0.98] transition"
+                    >
+                      Предыдущий месяц
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => changeMonth(1)}
+                      className="px-3 py-2 text-sm rounded-full bg-zinc-900 text-zinc-200 hover:bg-zinc-800 active:scale-[0.98] transition"
+                    >
+                      Следующий месяц
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCalendarView('month')}
+                      className={`px-3 py-2 text-sm rounded-full border ${
+                        calendarView === 'month'
+                          ? `${THEME_COLORS.accentBg} text-white border-transparent`
+                          : 'bg-zinc-900 text-zinc-200 border-zinc-700 hover:bg-zinc-800'
+                      } transition`}
+                    >
+                      Развернуть календарь
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCalendarView('week')}
+                      className={`px-3 py-2 text-sm rounded-full border ${
+                        calendarView === 'week'
+                          ? `${THEME_COLORS.accentBg} text-white border-transparent`
+                          : 'bg-zinc-900 text-zinc-200 border-zinc-700 hover:bg-zinc-800'
+                      } transition`}
+                    >
+                      Сжать до недели
+                    </button>
+                  </div>
                 </div>
               </div>
 
